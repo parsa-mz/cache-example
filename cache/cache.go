@@ -5,25 +5,29 @@ import (
 	"time"
 )
 
+// node defines the structure of each list element.
 type node struct {
-	key       []byte
-	value     []byte
-	expiry    time.Time
-	next      *node
-	prev      *node
+	key    []byte
+	value  []byte
+	expiry time.Time
+	next   *node
+	prev   *node
 }
 
+// CustomCache maintains the head and tail pointers and includes a mutex for synchronization.
 type CustomCache struct {
 	head, tail *node
 	lock       sync.Mutex
 }
 
+// NewCustomCache initializes and returns a new cache instance.
 func NewCustomCache() *CustomCache {
 	c := &CustomCache{}
-	go c.cleanupExpiredKeys()
+	go c.cleanupExpiredKeys() // Start background task to clean up expired keys.
 	return c
 }
 
+// Set appends a new node with key, value, and expiry to the linked list.
 func (c *CustomCache) Set(key, value []byte, ttl time.Duration) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -46,6 +50,7 @@ func (c *CustomCache) Set(key, value []byte, ttl time.Duration) {
 	}
 }
 
+// Get searches for the key in the list and returns the value and remaining TTL if not expired.
 func (c *CustomCache) Get(key []byte) (value []byte, ttl time.Duration) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -66,9 +71,10 @@ func (c *CustomCache) Get(key []byte) (value []byte, ttl time.Duration) {
 	return nil, 0
 }
 
+// cleanupExpiredKeys removes nodes from the list that have expired, running in a separate goroutine.
 func (c *CustomCache) cleanupExpiredKeys() {
 	for {
-		time.Sleep(1 * time.Minute) // Cleanup interval
+		time.Sleep(1 * time.Minute) // Interval to check and remove expired nodes.
 		c.lock.Lock()
 		for c.head != nil && time.Now().After(c.head.expiry) {
 			c.head = c.head.next
